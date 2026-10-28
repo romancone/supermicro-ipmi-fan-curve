@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+set -uo pipefail
+export LC_ALL=C
+
+CONFIG_FILE=${CONFIG_FILE:-/etc/default/supermicro-fan-curve}
+IPMITOOL=${IPMITOOL:-/usr/bin/ipmitool}
+LOCK_FILE=${LOCK_FILE:-/run/supermicro-fan-curve.lock}
+TEMP_SENSOR="CPU Temp"
+POLL_SECONDS=5
+HYSTERESIS_C=4
+DOWN_HOLD_SECONDS=30
+READ_FAILURE_LIMIT=3
+REASSERT_SECONDS=30
+UPPER_C=(54 64 72 85 200)
+CPU_PWM=(20 40 60 80 100)
+FRONT_PWM=(60 90 100 100 100)
+
+log() { printf '%s\n' "$*"; }
+ipmi() { timeout 8s "$IPMITOOL" "$@"; }
+set_zone() { ipmi raw 0x30 0x70 0x66 0x01 "$1" "$(printf '0x%02x' "$2")" >/dev/null; }
+
+set_safe_full_speed() {
+    ipmi raw 0x30 0x45 0x01 0x01 >/dev/null 2>&1 || true
+    set_zone 0 100 >/dev/null 2>&1 || true
+    set_zone 1 100 >/dev/null 2>&1 || true
+}
+
+validate_config() {
+    local count=${#UPPER_C[@]} i key value previous=-1 cpu=0 front=0
+    (( count > 0 && ${#CPU_PWM[@]} == count && ${#FRONT_PWM[@]} == count )) || return 1
+    for key in POLL_SECONDS HYSTERESIS_C DOWN_HOLD_SECONDS READ_FAILURE_LIMIT REASSERT_SECONDS; do
+        value=${!key}
+        [[ $value =~ ^[0-9]+$ ]] || return 1
+    done
+    (( POLL_SECONDS > 0 && READ_FAILURE_LIMIT > 0 && REASSERT_SECONDS > 0 )) || return 1
+    [[ -n $TEMP_SENSOR ]] || return 1
+    for ((i=0; i<count; i++)); do
+        [[ ${UPPER_C[i]} =~ ^[0-9]+$ && ${CPU_PWM[i]} =~ ^[0-9]+$ && ${FRONT_PWM[i]} =~ ^[0-9]+$ ]] || return 1
+        (( UPPER_C[i] > previous && CPU_PWM[i] > 0 && CPU_PWM[i] <= 100 && FRONT_PWM[i] > 0 && FRONT_PWM[i] <= 100 )) || return 1
+        (( CPU_PWM[i] >= cpu && FRONT_PWM[i] >= front )) || return 1
+        previous=${UPPER_C[i]} cpu=${CPU_PWM[i]} front=${FRONT_PWM[i]}
+    done
+    (( cpu == 100 && front == 100 ))
+}
+
+get_cpu_temp() {
+    local output value
+    output=$(ipmi sensor get "$TEMP_SENSOR" 2>/dev/null) || return 1
+    value=$(awk -F: '/Sensor Reading/ {
+        value=$2; sub(/^[[:space:]]+/, "", value)
+        if (match(value, /^[0-9]+([.][0-9]+)?/)) print substr(value, RSTART, RLENGTH)
+        exit
+    }' <<<"$output")
+    [[ $value =~ ^[0-9]+([.][0-9]+)?$ ]] || return 1
+    printf '%.0f\n' "$value"
+}
+
+stage_for_temp() {
+    local temp=$1 i last=$((${#UPPER_C[@]} - 1))
+    if (( temp >= 90 )); then
+        printf '%d\n' "$last"
+        return
+    fi
+    for i in "${!UPPER_C[@]}"; do
+        if (( temp <= UPPER_C[i] )); then
+            printf '%d\n' "$i"
+            return
+        fi
+    done
+    printf '%d\n' "$last"
+}
+
+apply_stage() {
+    local stage=$1 reason=$2 temp=$3
+    if ! set_zone 1 "${FRONT_PWM[stage]}" || ! set_zone 0 "${CPU_PWM[stage]}"; then
+        log "event=ipmi_failure action=full_speed"
+        set_safe_full_speed
+        current_stage=-1
+        return 1
+    fi
+    current_stage=$stage
+    last_apply_epoch=$(date +%s)
+    log "event=stage reason=$reason temp_c=$temp stage=$stage zone0_pwm=${CPU_PWM[stage]} zone1_pwm=${FRONT_PWM[stage]}"
+}
+
+on_stop() {
+    local status=$?
+    trap - EXIT TERM INT
+    log "event=stop exit_code=$status action=full_speed"
+    set_safe_full_speed
+}
+
+main() {
+    if [[ ! -r $CONFIG_FILE ]] || ! source "$CONFIG_FILE"; then
+        log "event=config_failure"
+        return 1
+    fi
+    if ! validate_config; then
+        log "event=invalid_config"
+        return 1
+    fi
+    if [[ ${1:-} == --check ]]; then
+        return 0
+    fi
+    (( $# == 0 )) || return 2
+    exec 9>"$LOCK_FILE"
+    flock -n 9 || { log "event=duplicate_controller"; return 1; }
+    trap on_stop EXIT
+    trap 'exit 0' TERM INT
+
+    local attempt ready=0
+    for ((attempt=0; attempt<20; attempt++)); do
+        if ipmi mc info >/dev/null 2>&1; then ready=1; break; fi
+        sleep 3
+    done
+    (( ready )) || { log "event=ipmi_unavailable"; return 1; }
+    ipmi raw 0x30 0x45 0x01 0x01 >/dev/null || return 1
+    set_zone 1 100 || return 1
+    set_zone 0 100 || return 1
+
+    local current_stage=-1 last_apply_epoch=0 read_failures=0 down_since=0
+    local temp desired_stage now decrease_at
+    while true; do
+        now=$(date +%s)
+        if ! temp=$(get_cpu_temp); then
+            ((read_failures++))
+            log "event=sensor_failure failures=$read_failures limit=$READ_FAILURE_LIMIT"
+            if (( read_failures >= READ_FAILURE_LIMIT )); then
+                if (( read_failures == READ_FAILURE_LIMIT || now - last_apply_epoch >= REASSERT_SECONDS )); then
+                    set_safe_full_speed
+                    last_apply_epoch=$now
+                    current_stage=-1
+                    down_since=0
+                    log "event=fail_safe action=full_speed"
+                fi
+            fi
+            sleep "$POLL_SECONDS"
+            continue
+        fi
+        read_failures=0
+        desired_stage=$(stage_for_temp "$temp")
+        if (( current_stage < 0 || desired_stage > current_stage )); then
+            apply_stage "$desired_stage" temperature-rise "$temp" || true
+            down_since=0
+        elif (( desired_stage < current_stage )); then
+            decrease_at=$((UPPER_C[current_stage - 1] + 1 - HYSTERESIS_C))
+            if (( temp <= decrease_at )); then
+                if (( down_since == 0 )); then
+                    down_since=$now
+                elif (( now - down_since >= DOWN_HOLD_SECONDS )); then
+                    apply_stage "$((current_stage - 1))" cooldown "$temp" || true
+                    down_since=0
+                fi
+            else
+                down_since=0
+            fi
+        else
+            down_since=0
+        fi
+        if (( current_stage >= 0 && now - last_apply_epoch >= REASSERT_SECONDS )); then
+            apply_stage "$current_stage" reassert "$temp" || true
+        fi
+        sleep "$POLL_SECONDS"
+    done
+}
+
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+    main "$@"
+fi

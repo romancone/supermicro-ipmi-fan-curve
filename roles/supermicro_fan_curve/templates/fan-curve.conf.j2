@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+TEMP_SENSOR={{ supermicro_fan_sensor | quote }}
+POLL_SECONDS={{ supermicro_fan_poll_seconds }}
+HYSTERESIS_C={{ supermicro_fan_hysteresis_c }}
+DOWN_HOLD_SECONDS={{ supermicro_fan_down_hold_seconds }}
+READ_FAILURE_LIMIT={{ supermicro_fan_read_failure_limit }}
+REASSERT_SECONDS={{ supermicro_fan_reassert_seconds }}
+UPPER_C=({{ supermicro_fan_curve | map(attribute='upper_c') | join(' ') }})
+CPU_PWM=({{ supermicro_fan_curve | map(attribute='cpu_pwm') | join(' ') }})
+FRONT_PWM=({{ supermicro_fan_curve | map(attribute='front_pwm') | join(' ') }})

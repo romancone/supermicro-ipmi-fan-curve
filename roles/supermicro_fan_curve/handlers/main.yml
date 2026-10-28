@@ -1,0 +1,6 @@
+---
+- name: Restart fan controller
+  ansible.builtin.systemd_service:
+    name: supermicro-fan-curve.service
+    daemon_reload: true
+    state: restarted

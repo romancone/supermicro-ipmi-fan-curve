@@ -1,0 +1,90 @@
+---
+- name: Require a supported platform and curve
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.os_family == 'Debian'
+      - ansible_facts.board_name in supermicro_fan_supported_boards
+      - supermicro_fan_curve | length > 0
+      - supermicro_fan_poll_seconds is integer and supermicro_fan_poll_seconds > 0
+      - supermicro_fan_hysteresis_c is integer and supermicro_fan_hysteresis_c >= 0
+      - supermicro_fan_down_hold_seconds is integer and supermicro_fan_down_hold_seconds >= 0
+      - supermicro_fan_read_failure_limit is integer and supermicro_fan_read_failure_limit > 0
+      - supermicro_fan_reassert_seconds is integer and supermicro_fan_reassert_seconds > 0
+      - supermicro_fan_start_delay_seconds is integer and supermicro_fan_start_delay_seconds >= 0
+      - (supermicro_fan_curve | last).cpu_pwm | int == 100
+      - (supermicro_fan_curve | last).front_pwm | int == 100
+    fail_msg: Verify motherboard compatibility and a fail-safe fan curve before deployment.
+
+- name: Validate each fan curve stage
+  ansible.builtin.assert:
+    that:
+      - item.upper_c is integer
+      - item.cpu_pwm is integer
+      - item.front_pwm is integer
+      - item.upper_c >= 0
+      - item.cpu_pwm > 0 and item.cpu_pwm <= 100
+      - item.front_pwm > 0 and item.front_pwm <= 100
+      - stage == 0 or item.upper_c > supermicro_fan_curve[stage - 1].upper_c
+      - stage == 0 or item.cpu_pwm >= supermicro_fan_curve[stage - 1].cpu_pwm
+      - stage == 0 or item.front_pwm >= supermicro_fan_curve[stage - 1].front_pwm
+  loop: "{{ supermicro_fan_curve }}"
+  loop_control:
+    index_var: stage
+
+- name: Install IPMI tools
+  ansible.builtin.apt:
+    name: ipmitool
+    state: present
+
+- name: Validate configured fan thresholds
+  ansible.builtin.assert:
+    that:
+      - item.sensor is string and item.sensor | length > 0
+      - item.lnr is integer and item.lcr is integer
+      - item.lnr > 0 and item.lnr <= item.lcr
+  loop: "{{ supermicro_fan_thresholds }}"
+
+- name: Configure requested fan thresholds
+  ansible.builtin.include_tasks: thresholds.yml
+  loop: "{{ supermicro_fan_thresholds }}"
+  loop_control:
+    loop_var: fan_threshold
+
+- name: Install fan controller
+  ansible.builtin.copy:
+    src: supermicro-fan-curve
+    dest: /usr/local/sbin/supermicro-fan-curve
+    owner: root
+    group: root
+    mode: "0755"
+    backup: true
+    validate: /bin/bash -n %s
+  notify: Restart fan controller
+
+- name: Configure fan controller
+  ansible.builtin.template:
+    src: fan-curve.conf.j2
+    dest: /etc/default/supermicro-fan-curve
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+    validate: /bin/bash -n %s
+  notify: Restart fan controller
+
+- name: Install fan service
+  ansible.builtin.template:
+    src: fan-curve.service.j2
+    dest: /etc/systemd/system/supermicro-fan-curve.service
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify: Restart fan controller
+
+- name: Enable fan controller
+  ansible.builtin.systemd_service:
+    name: supermicro-fan-curve.service
+    daemon_reload: true
+    enabled: true
+    state: started

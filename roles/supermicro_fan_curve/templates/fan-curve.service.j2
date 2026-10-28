@@ -1,0 +1,23 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Supermicro IPMI fan curve
+Documentation=man:ipmitool(1)
+After=systemd-modules-load.service local-fs.target rc-local.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Environment={{ ('IPMITOOL=' ~ supermicro_fan_ipmitool) | quote }}
+ExecStartPre=-/usr/sbin/modprobe ipmi_si
+ExecStartPre=-/usr/sbin/modprobe ipmi_devintf
+ExecStartPre=/bin/sleep {{ supermicro_fan_start_delay_seconds }}
+ExecStart=/usr/local/sbin/supermicro-fan-curve
+ExecStopPost=-/usr/bin/timeout 8 {{ supermicro_fan_ipmitool }} raw 0x30 0x45 0x01 0x01
+Restart=always
+RestartSec=10s
+TimeoutStopSec=40s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

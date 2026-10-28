@@ -1,0 +1,51 @@
+---
+- name: Read current fan thresholds
+  ansible.builtin.command:
+    argv: [timeout, 8s, "{{ supermicro_fan_ipmitool }}", sensor, get, "{{ fan_threshold.sensor }}"]
+  register: fan_threshold_before
+  changed_when: false
+  check_mode: false
+
+- name: Require readable lower fan thresholds
+  ansible.builtin.assert:
+    that:
+      - fan_threshold_before.stdout is search('(?m)^[ \t]*Lower Non-Recoverable\s*:\s*[0-9]+(?:\.[0-9]+)?\s*$')
+      - fan_threshold_before.stdout is search('(?m)^[ \t]*Lower Critical\s*:\s*[0-9]+(?:\.[0-9]+)?\s*$')
+    fail_msg: "Cannot safely configure lower thresholds for {{ fan_threshold.sensor }}."
+
+- name: Set changed lower fan thresholds
+  ansible.builtin.command:
+    argv:
+      - timeout
+      - 8s
+      - "{{ supermicro_fan_ipmitool }}"
+      - sensor
+      - thresh
+      - "{{ fan_threshold.sensor }}"
+      - "{{ item.key }}"
+      - "{{ item.value | string }}"
+  vars:
+    current_lcr: >-
+      {{ fan_threshold_before.stdout | regex_findall('(?m)^[ \t]*Lower Critical\s*:\s*([0-9.]+)') | first | float }}
+    updates:
+      - {key: lnr, label: Lower Non-Recoverable, value: "{{ fan_threshold.lnr }}"}
+      - {key: lcr, label: Lower Critical, value: "{{ fan_threshold.lcr }}"}
+  loop: "{{ updates | reverse | list if fan_threshold.lnr > current_lcr else updates }}"
+  when: >-
+    (fan_threshold_before.stdout | regex_findall('(?m)^[ \t]*' ~ item.label ~ '\s*:\s*([0-9.]+)') | first | float)
+    != item.value | float
+
+- name: Read back configured fan thresholds
+  ansible.builtin.command:
+    argv: [timeout, 8s, "{{ supermicro_fan_ipmitool }}", sensor, get, "{{ fan_threshold.sensor }}"]
+  register: fan_threshold_after
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify configured fan thresholds
+  ansible.builtin.assert:
+    that:
+      - (fan_threshold_after.stdout | regex_findall('(?m)^[ \t]*Lower Non-Recoverable\s*:\s*([0-9.]+)') | first | float) == fan_threshold.lnr
+      - (fan_threshold_after.stdout | regex_findall('(?m)^[ \t]*Lower Critical\s*:\s*([0-9.]+)') | first | float) == fan_threshold.lcr
+    fail_msg: "BMC did not retain the requested thresholds for {{ fan_threshold.sensor }}."
+  when: not ansible_check_mode
