@@ -1,0 +1,9 @@
+---
+# FAN2/FAN3: Scythe Mugen 6; FAN4: rear exhaust; FAN1: unused.
+# Zone 0 minimum must keep both CPU fans above their BMC alarm thresholds.
+supermicro_fan_curve:
+  - {upper_c: 54, cpu_pwm: 48, front_pwm: 50}
+  - {upper_c: 75, cpu_pwm: 60, front_pwm: 90}
+  - {upper_c: 80, cpu_pwm: 80, front_pwm: 100}
+  - {upper_c: 85, cpu_pwm: 90, front_pwm: 100}
+  - {upper_c: 200, cpu_pwm: 100, front_pwm: 100}
