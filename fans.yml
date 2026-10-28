@@ -3,8 +3,5 @@
   hosts: fan_hosts
   become: true
   gather_facts: true
-  vars:
-    supermicro_fan_thresholds:
-      - {sensor: FAN4, lnr: 420, lcr: 700}
   roles:
     - supermicro_fan_curve

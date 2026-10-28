@@ -1,2 +1,2 @@
 [fan_hosts]
-server ansible_host=server.example.net ansible_user=operator
+smicro ansible_host=smicro.example.net ansible_user=operator

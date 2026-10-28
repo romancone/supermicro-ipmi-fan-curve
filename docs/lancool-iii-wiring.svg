@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1020" height="650" viewBox="20 120 1020 650" role="img" aria-labelledby="title desc">
+  <title id="title">LANCOOL III RGB and X12SCZ-F fan connections</title>
+  <desc id="desc">Side-view airflow schematic with the two Mugen 6 fans on FAN2 and FAN3, rear exhaust on FAN4, and front intakes on FANA. Blue zone zero connects both CPU fans and the rear exhaust. Green zone one connects the front intakes through a three-way PWM splitter. Header positions are schematic, not an exact board locator.</desc>
+  <defs>
+    <marker id="air" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#047857"/></marker>
+    <marker id="warm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#c2410c"/></marker>
+    <g id="fan"><circle r="38" fill="white" stroke="currentColor" stroke-width="3"/><circle r="8" fill="currentColor"/><path d="M0 -9 Q-27 -42 -29 -9 Q-23 7 -7 3 M8 3 Q45 -3 22 24 Q8 32 0 9 M-7 6 Q-15 43 12 28 Q26 16 7 3" fill="currentColor" opacity="0.55"/></g>
+    <g id="header"><rect width="20" height="12" rx="1" fill="#fff" stroke="currentColor" stroke-width="2"/><path d="M4 3 V9 M8 3 V9 M12 3 V9 M16 3 V9" stroke="currentColor"/></g>
+    <style>
+      text {font-family:Arial,Helvetica,sans-serif;fill:#172121}
+      .muted {fill:#52615d}
+      .zone0 {fill:#0369a1}
+      .zone1 {fill:#047857}
+      .small {font-size:16px}
+      .body {font-size:19px}
+      .label {font-size:21px;font-weight:700}
+    </style>
+  </defs>
+  <rect x="20" y="120" width="1020" height="650" fill="#fff"/>
+
+  <text x="70" y="159" class="small muted">FRONT / INTAKE</text>
+  <text x="791" y="159" class="small muted">REAR / EXHAUST</text>
+  <rect x="154" y="180" width="745" height="465" rx="5" fill="#fafcfc" stroke="#9caeaa" stroke-width="3"/>
+  <path d="M172 192 V629" stroke="#c5d2ce" stroke-width="9" stroke-dasharray="4 6"/>
+  <path d="M884 192 V417" stroke="#c5d2ce" stroke-width="9" stroke-dasharray="4 6"/>
+  <rect x="356" y="214" width="440" height="315" fill="#f0f5f3" stroke="#a3b6ae"/>
+  <text x="369" y="239" class="small muted">Motherboard</text>
+
+  <g transform="translate(207 278)" color="#047857"><use href="#fan"/></g>
+  <g transform="translate(207 405)" color="#047857"><use href="#fan"/></g>
+  <g transform="translate(207 553)" color="#047857"><use href="#fan"/></g>
+  <g transform="translate(846 310)" color="#0369a1"><use href="#fan"/></g>
+  <text x="270" y="275" class="small zone1">Upper front</text>
+  <text x="270" y="402" class="small zone1">Middle front</text>
+  <text x="270" y="546" class="small zone1">Lower front</text>
+  <text x="270" y="571" class="small muted">Tach output</text>
+  <path d="M245 278 H256 V553 H245 M245 405 H256 M256 461 H382" fill="none" stroke="#047857" stroke-width="2" stroke-dasharray="5 4"/>
+  <circle cx="256" cy="461" r="5" fill="#fff" stroke="#047857" stroke-width="2"/>
+  <text x="270" y="446" class="zone1" font-size="13">3-way PWM splitter</text>
+  <g transform="translate(382 455)" color="#047857"><use href="#header"/></g>
+  <text x="412" y="467" class="label zone1">FANA</text>
+  <text x="807" y="375" class="small zone0">Rear fan</text>
+  <path d="M808 310 H780 V280 H760" fill="none" stroke="#0369a1" stroke-width="2" stroke-dasharray="5 4"/>
+  <g transform="translate(740 274)" color="#0369a1"><use href="#header"/></g>
+  <text x="735" y="253" class="label zone0">FAN4</text>
+  <g fill="none" stroke="#047857" stroke-width="5" marker-end="url(#air)"><path d="M66 278 H154"/><path d="M66 405 H154"/><path d="M66 553 H154"/></g>
+
+  <rect x="499" y="267" width="142" height="130" rx="3" fill="#fff" stroke="#0369a1" stroke-width="3"/>
+  <path d="M516 279 V382 M530 279 V382 M544 279 V382 M558 279 V382 M572 279 V382 M586 279 V382 M600 279 V382 M614 279 V382" stroke="#adc2ce" stroke-width="3"/>
+  <g transform="translate(490 332)" color="#0369a1"><use href="#fan"/></g>
+  <g transform="translate(650 332)" color="#0369a1"><use href="#fan"/></g>
+  <text x="536" y="422" class="small zone0">CPU cooler</text>
+  <path d="M490 370 V451 H560 M650 370 V451 H700" fill="none" stroke="#0369a1" stroke-width="2" stroke-dasharray="5 4"/>
+  <g transform="translate(560 445)" color="#0369a1"><use href="#header"/></g>
+  <text x="585" y="459" class="small zone0">FAN2</text>
+  <g transform="translate(700 445)" color="#0369a1"><use href="#header"/></g>
+  <text x="725" y="459" class="small zone0">FAN3</text>
+  <g fill="none" stroke="#047857" stroke-width="5" marker-end="url(#air)"><path d="M375 314 H438"/><path d="M647 314 H795"/></g>
+  <path d="M889 310 H965" fill="none" stroke="#c2410c" stroke-width="5" marker-end="url(#warm)"/>
+  <path d="M376 405 H452 V365" fill="none" stroke="#047857" stroke-width="4" marker-end="url(#air)"/>
+
+  <rect x="437" y="475" width="316" height="30" fill="#d5dfdb"/>
+  <text x="456" y="496" class="small muted">Expansion / lower motherboard area</text>
+  <path d="M376 553 H693" fill="none" stroke="#047857" stroke-width="4" marker-end="url(#air)"/>
+  <path d="M375 598 H884" stroke="#9caeaa" stroke-width="2" stroke-dasharray="7 5"/>
+  <text x="440" y="625" class="small muted">PSU / drive chamber</text>
+  <text x="660" y="679" class="small muted">FAN1 / FANB: spare</text>
+  <circle cx="240" cy="735" r="8" fill="#0369a1"/>
+  <text x="258" y="741" class="body zone0">Zone 0 / CPU + rear</text>
+  <circle cx="565" cy="735" r="8" fill="#047857"/>
+  <text x="583" y="741" class="body zone1">Zone 1 / front intakes</text>
+
+</svg>

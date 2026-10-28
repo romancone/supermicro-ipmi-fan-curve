@@ -11,18 +11,20 @@ HYSTERESIS_C=4
 DOWN_HOLD_SECONDS=30
 READ_FAILURE_LIMIT=3
 REASSERT_SECONDS=30
-UPPER_C=(54 64 72 85 200)
-CPU_PWM=(20 40 60 80 100)
-FRONT_PWM=(60 90 100 100 100)
+UPPER_C=()
+CPU_PWM=()
+FRONT_PWM=()
 
 log() { printf '%s\n' "$*"; }
 ipmi() { timeout 8s "$IPMITOOL" "$@"; }
 set_zone() { ipmi raw 0x30 0x70 0x66 0x01 "$1" "$(printf '0x%02x' "$2")" >/dev/null; }
 
 set_safe_full_speed() {
-    ipmi raw 0x30 0x45 0x01 0x01 >/dev/null 2>&1 || true
-    set_zone 0 100 >/dev/null 2>&1 || true
-    set_zone 1 100 >/dev/null 2>&1 || true
+    local failed=0
+    ipmi raw 0x30 0x45 0x01 0x01 >/dev/null 2>&1 || failed=1
+    set_zone 0 100 >/dev/null 2>&1 || failed=1
+    set_zone 1 100 >/dev/null 2>&1 || failed=1
+    return "$failed"
 }
 
 validate_config() {
@@ -73,8 +75,8 @@ stage_for_temp() {
 apply_stage() {
     local stage=$1 reason=$2 temp=$3
     if ! set_zone 1 "${FRONT_PWM[stage]}" || ! set_zone 0 "${CPU_PWM[stage]}"; then
-        log "event=ipmi_failure action=full_speed"
-        set_safe_full_speed
+        log "event=ipmi_failure action=request_full_speed"
+        set_safe_full_speed || log "event=full_speed_failure"
         current_stage=-1
         return 1
     fi
@@ -87,7 +89,7 @@ on_stop() {
     local status=$?
     trap - EXIT TERM INT
     log "event=stop exit_code=$status action=full_speed"
-    set_safe_full_speed
+    set_safe_full_speed || log "event=full_speed_failure"
 }
 
 main() {
@@ -127,11 +129,10 @@ main() {
             log "event=sensor_failure failures=$read_failures limit=$READ_FAILURE_LIMIT"
             if (( read_failures >= READ_FAILURE_LIMIT )); then
                 if (( read_failures == READ_FAILURE_LIMIT || now - last_apply_epoch >= REASSERT_SECONDS )); then
-                    set_safe_full_speed
+                    if set_safe_full_speed; then log "event=fail_safe action=full_speed result=ok"; else log "event=fail_safe action=full_speed result=failed"; fi
                     last_apply_epoch=$now
                     current_stage=-1
                     down_since=0
-                    log "event=fail_safe action=full_speed"
                 fi
             fi
             sleep "$POLL_SECONDS"

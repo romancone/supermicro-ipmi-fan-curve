@@ -11,8 +11,8 @@ supermicro_fan_start_delay_seconds: 20
 supermicro_fan_ipmitool: /usr/bin/ipmitool
 supermicro_fan_thresholds: []
 supermicro_fan_curve:
-  - {upper_c: 54, cpu_pwm: 20, front_pwm: 60}
-  - {upper_c: 64, cpu_pwm: 40, front_pwm: 90}
-  - {upper_c: 72, cpu_pwm: 60, front_pwm: 100}
-  - {upper_c: 85, cpu_pwm: 80, front_pwm: 100}
+  - {upper_c: 54, cpu_pwm: 50, front_pwm: 50}
+  - {upper_c: 75, cpu_pwm: 60, front_pwm: 70}
+  - {upper_c: 80, cpu_pwm: 80, front_pwm: 90}
+  - {upper_c: 85, cpu_pwm: 90, front_pwm: 100}
   - {upper_c: 200, cpu_pwm: 100, front_pwm: 100}
