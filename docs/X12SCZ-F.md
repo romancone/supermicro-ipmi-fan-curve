@@ -1,8 +1,10 @@
-# Node2 Hardware: X12SCZ-F And LANCOOL III
+# smicro Hardware: X12SCZ-F And LANCOOL III
+
+`smicro` is the example host alias for the hardware configuration described here.
 
 ## LANCOOL III RGB Fan Connections
 
-Reference layout and node2 curve for four stock case fans and two Scythe Mugen 6
+Reference layout and smicro curve for four stock case fans and two Scythe Mugen 6
 CPU fans. The lower intake is the third, lowest front-panel fan. The CPU
 heatsink moves air from front to rear. Validate temperatures and noise with
 the case closed before unattended use.
@@ -60,7 +62,7 @@ PWM curve for each. Zone 1 can therefore retain a quiet front-intake baseline
 and increase airflow as CPU temperature rises. Moving connectors does not
 change either configured curve or establish a new stable minimum.
 
-Node2 curve:
+[`smicro` curve](../inventory/host_vars/smicro.example.yml):
 
 | CPU temperature | CPU/rear, zone 0 | Front intakes, zone 1 |
 |---|---:|---:|
@@ -75,7 +77,7 @@ thresholds. During a 90-second, 100% CPU `stress-ng` run, the 60%/70% stage held
 the highest temperature logged by the controller was 61 C. No higher stage or
 new critical fan event appeared in the BMC log.
 
-| Measured on node2 | FAN2 | FAN3 | FAN4 | FANA |
+| Measured on smicro | FAN2 | FAN3 | FAN4 | FANA |
 |---|---:|---:|---:|---:|
 | 50%/50%, idle | 1260 RPM | 1260 RPM | 980 RPM | 700 RPM |
 | 60%/70%, CPU stress | 1540 RPM | 1540 RPM | 1120 RPM | 1120 RPM |
@@ -83,7 +85,7 @@ new critical fan event appeared in the BMC log.
 These are observed speeds, not switching thresholds. The controller selects a
 stage from CPU temperature.
 
-The node2 host profile sets FAN4 lower-critical to **700 RPM** and lower-non-recoverable
+The smicro host profile sets FAN4 lower-critical to **700 RPM** and lower-non-recoverable
 to **420 RPM**, matching FAN2/FAN3. FAN1 thresholds and BMC hysteresis remain
 unchanged. FAN4 can still report `Lower Non-Critical` while its numerical LNC
 threshold is `n/a`; this status is distinct from a new critical assertion in
