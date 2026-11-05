@@ -67,7 +67,8 @@ Ansible installs the distribution's `ipmitool` package and manages only these fi
 /etc/systemd/system/supermicro-fan-curve.service
 ```
 
-For `smicro`, copy the inventory example and edit its address and SSH account.
+`smicro` is the example host alias used throughout this documentation.
+Copy the inventory example and replace its address and SSH account with your own.
 The role supplies the default curve. Private inventory and live host variables
 are ignored by Git.
 

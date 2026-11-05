@@ -26,13 +26,13 @@
   configuration in a separate section.
 - Explain values with short YAML or Bash comments. Put separate commands on
   separate lines; do not chain them with `&&`. State the output that confirms success.
-- Distinguish role defaults, node2 configuration and measurements. Do not
+- Distinguish role defaults, smicro configuration and measurements. Do not
   present an untested setting or fan speed as verified.
 - `README.md` owns the role overview, default curve, deployment, operation,
   controller safety and checks.
-- `docs/X12SCZ-F.md` owns node2 wiring, airflow, curve table, measured RPM,
+- `docs/X12SCZ-F.md` owns smicro wiring, airflow, curve table, measured RPM,
   fan-specific limits and board/case references.
-- `inventory/host_vars/node2.example.yml` owns published node2 settings.
+- `inventory/host_vars/smicro.example.yml` owns published smicro settings.
   Link to it before deploy commands; do not copy its full curve into README.
 - Link across documents instead of repeating host-specific tables and evidence.
 - Keep graphics to schematics with short descriptive labels. Put tables,
